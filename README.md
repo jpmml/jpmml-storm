@@ -1,4 +1,4 @@
-JPMML-Storm
+JPMML-Storm [![Build Status](https://travis-ci.org/jpmml/jpmml-storm.png?branch=master)](https://travis-ci.org/jpmml/jpmml-storm)
 ===========
 
 PMML evaluator library for the Apache Storm distributed realtime computation system (https://storm.apache.org/).
