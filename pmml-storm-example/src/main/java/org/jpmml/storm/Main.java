@@ -19,12 +19,8 @@
 package org.jpmml.storm;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.xml.transform.Source;
 
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
@@ -32,14 +28,7 @@ import backtype.storm.generated.StormTopology;
 import backtype.storm.topology.TopologyBuilder;
 import backtype.storm.utils.Utils;
 import org.dmg.pmml.FieldName;
-import org.dmg.pmml.PMML;
-import org.jpmml.evaluator.ModelEvaluator;
-import org.jpmml.evaluator.ModelEvaluatorFactory;
-import org.jpmml.manager.PMMLManager;
-import org.jpmml.model.ImportFilter;
-import org.jpmml.model.JAXBUtil;
-import org.jpmml.model.visitors.LocatorTransformer;
-import org.xml.sax.InputSource;
+import org.jpmml.evaluator.Evaluator;
 
 public class Main {
 
@@ -52,39 +41,24 @@ public class Main {
 			System.exit(-1);
 		}
 
-		PMML pmml;
+		Evaluator evaluator = PMMLBoltUtil.createEvaluator(new File(args[0]));
 
-		InputStream is = new FileInputStream(args[0]);
+		PMMLBolt pmmlBolt = new PMMLBolt(evaluator);
 
-		try {
-			Source source = ImportFilter.apply(new InputSource(is));
-
-			pmml = JAXBUtil.unmarshalPMML(source);
-		} finally {
-			is.close();
-		}
-
-		pmml.accept(new LocatorTransformer());
-
-		PMMLManager pmmlManager = new PMMLManager(pmml);
-
-		ModelEvaluator<?> modelEvaluator = (ModelEvaluator<?>)pmmlManager.getModelManager(ModelEvaluatorFactory.getInstance());
-
-		PMMLBolt pmmlEvaluator = new PMMLBolt(modelEvaluator);
-
-		List<FieldName> inputFields = new ArrayList<FieldName>();
-		inputFields.addAll(modelEvaluator.getActiveFields());
+		List<FieldName> inputFields = new ArrayList<>();
+		inputFields.addAll(evaluator.getActiveFields());
 
 		CsvReaderSpout csvReader = new CsvReaderSpout(new File(args[1]), inputFields);
 
-		List<FieldName> outputFields = new ArrayList<FieldName>();
-		outputFields.addAll(modelEvaluator.getTargetFields());
-		outputFields.addAll(modelEvaluator.getOutputFields());
+		List<FieldName> outputFields = new ArrayList<>();
+		outputFields.addAll(evaluator.getTargetFields());
+		outputFields.addAll(evaluator.getOutputFields());
+
 		CsvWriterBolt csvWriter = new CsvWriterBolt(new File(args[2]), outputFields);
 
 		TopologyBuilder topologyBuilder = new TopologyBuilder();
 		topologyBuilder.setSpout("input", csvReader);
-		topologyBuilder.setBolt("pmml", pmmlEvaluator)
+		topologyBuilder.setBolt("pmml", pmmlBolt)
 			.shuffleGrouping("input");
 		topologyBuilder.setBolt("output", csvWriter)
 			.shuffleGrouping("pmml");

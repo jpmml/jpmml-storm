@@ -55,7 +55,7 @@ public class PMMLBolt extends BaseRichBolt {
 	public void execute(Tuple tuple){
 		Evaluator evaluator = getEvaluator();
 
-		Map<FieldName, FieldValue> arguments = new LinkedHashMap<FieldName, FieldValue>();
+		Map<FieldName, FieldValue> arguments = new LinkedHashMap<>();
 
 		List<FieldName> activeFields = evaluator.getActiveFields();
 		for(FieldName activeField : activeFields){
@@ -70,12 +70,16 @@ public class PMMLBolt extends BaseRichBolt {
 
 		List<FieldName> targetFields = evaluator.getTargetFields();
 		for(FieldName targetField : targetFields){
-			values.add(EvaluatorUtil.decode(result.get(targetField)));
+			Object targetValue = result.get(targetField);
+
+			values.add(EvaluatorUtil.decode(targetValue));
 		}
 
 		List<FieldName> outputFields = evaluator.getOutputFields();
 		for(FieldName outputField : outputFields){
-			values.add(result.get(outputField));
+			Object outputValue = result.get(outputField);
+
+			values.add(outputValue);
 		}
 
 		OutputCollector collector = getCollector();
@@ -93,7 +97,7 @@ public class PMMLBolt extends BaseRichBolt {
 	public void declareOutputFields(OutputFieldsDeclarer declarer){
 		Evaluator evaluator = getEvaluator();
 
-		List<String> fields = new ArrayList<String>();
+		List<String> fields = new ArrayList<>();
 
 		List<FieldName> targetFields = evaluator.getTargetFields();
 		for(FieldName targetField : targetFields){
